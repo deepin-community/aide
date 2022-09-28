@@ -1,0 +1,2 @@
+aide: statically-linked-binary usr/bin/aide
+aide: embedded-library usr/bin/aide: zlib

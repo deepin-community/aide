@@ -1,0 +1,146 @@
+.TH AIDE 1 "2021-02-10" "aide v0.17.3" "User Commands"
+.SH NAME
+\fBaide\fP \- Advanced Intrusion Detection Environment
+.SH SYNOPSIS
+\fBaide\fP
+\%[\fBparameters\fP]
+\%\fBcommand\fP
+.SH DESCRIPTION
+\fBAIDE\fP is an intrusion detection system for checking the integrity
+of files.
+
+.SH COMMANDS
+.PP
+.IP "--check, -C"
+Checks the database for inconsistencies. You must have an initialized
+database to do this. This is also the default command. Without any
+command \fBaide\fP does a check.
+.IP "--init, -i"
+Initialize the database. You must initialize a database and move it to
+the appropriate place (see \fBdatabase_in\fR config option) before you can use
+the \-\-check command.
+.IP "--dry-init, -n"
+Traverse the file system, match each file against the rule tree and report to stdout.
+
+Neither reports nor the database are written in this mode.
+
+To change the log level in this mode please use the \fB--log-level\fR command line parameter.
+
+In this mode aide exits with status 0.
+
+.IP "--update, -u"
+Checks the database and updates the database non-interactively.
+The input and output databases must be different.
+.IP "--compare, -E"
+Compares two databases. They must be defined in config file with
+database=<url> and database_new=<url>.
+.IP "--config-check, -D"
+Stops after reading in the configuration file. Any errors will be reported.
+To change the log level in this mode please use the \fB--log-level\fR
+command line parameter.
+.IP "--path-check=\fIfile_type\fR:\fIpath\fR, -p \fIfile_type\fR:\fIpath\fR"
+Read configuration and match provided file_type and path against rule tree. The
+path is independent of what is in the actual file system and needs to be
+absolute. See RESTRICTED RULES section in aide.conf (5) for supported file
+types.
+
+To change the log level in this mode please use the \fB--log-level\fR command line parameter.
+
+In this mode aide exits with status 0 if the file would be added to the tree, 1
+if not and 2 if the file does not match a specified limit.
+
+.SH PARAMETERS
+.IP "--config=\fBconfigfile\fR , -c \fBconfigfile\fR"
+Configuration is read from file \fBconfigfile\fR (see \fB--version\fP output for default value).
+Use '-' for stdin.
+.IP "--limit=\fBREGEX\fR , -l \fBREGEX\fR"
+Limit command to entries matching REGEX. Note that the REGEX only matches
+at the first position.
+
+.RS
+.B Example
+.RS 3
+Only check and update the database entries matching /etc (i.e. the /etc
+directory) while leaving all other entries unchecked and unchanged:
+
+.RS 3
+.nf
+aide --update --limit /etc
+.fi
+.RE
+.RE
+.RE
+
+.IP "--before=\(dq\fBconfigparameters\fR\(dq , -B \(dq\fBconfigparameters\fR\(dq"
+These \fBconfigparameters\fR are handled before the reading of the
+configuration file. See aide.conf (5) for more details on what to put
+here.
+.IP "--after=\(dq\fBconfigparameters\fR\(dq , -A \(dq\fBconfigparameters\fR\(dq"
+These \fBconfigparameters\fR are handled after the reading of the
+configuration file. See aide.conf (5) for more details on what to put
+here.
+.IP --log-level=\fBlog_level\fR,-L\fBlog_level\fR
+The log level to use (see aide.conf (5) for available log levels and more details).
+This overwrites the log_level value set in any configuration file.
+.IP --verbose=\fBverbosity_level\fR,-V\fBverbosity_level\fR
+Removed in AIDE v0.17, use \fBlog_level\fR and \fBreport_level\fR config options instead (see aide.conf (5) for details).
+.IP "--version,-v"
+\fBaide\fP prints out its version number
+.IP "--help,-h"
+Prints out the standard help message.
+.PP
+.SH EXIT STATUS
+Normally, the exit status is 0 if no errors occurred. Except when the
+.BR --check ,
+.BR --compare " or"
+.B --update
+command was requested, in which case the exit status is defined as:
+.IP "1 * (new files reported?)     +"
+.IP "2 * (removed files reported?) +"
+.IP "4 * (changed files reported?)"
+.PP
+Since those three cases can occur together, the respective error codes
+are added. For example, if there are new files and removed files reported,
+the exit status will be 1 + 2 = 3.
+.PP
+Additionally, the following exit codes are defined for generic error
+conditions:
+.IP "14 Writing error"
+.IP "15 Invalid argument error"
+.IP "16 Unimplemented function error"
+.IP "17 Configuration error"
+.IP "18 IO error"
+.IP "19 Version mismatch error"
+.IP "20 EXEC error"
+.IP "21 File lock error"
+.PP
+.SH SIGNAL HANDLING
+Please note that due to mmap issues, aide cannot be terminated with
+SIGTERM. Use SIGKILL to terminate.
+
+SIGUSR1 toggles the log_level between current and debug level.
+.PP
+.SH NOTES
+
+The checksums in the database and in the output are by default base64
+encoded (see also report_base16 option).
+To decode them you can use the following shell command:
+
+echo <encoded_checksum> | base64 \-d | hexdump \-v \-e '32/1 "%02x" "\\n"'
+
+.PP
+.SH FILES
+
+See \fB--version\fR output for the default \fBconfig file\fR and the
+default \fBdatabase_in\fR and \fBdatabase_out\fR config values.
+
+.SH SEE ALSO
+.BR aide.conf (5)
+.SH BUGS
+There are probably bugs in this release. Please report them
+at https://github.com/aide/aide/issues .
+.SH DISCLAIMER
+All trademarks are the property of their respective owners.
+No animals were harmed while making this webpage or this piece of
+software. Although some pizza delivery guy's feelings were hurt.
+.BR

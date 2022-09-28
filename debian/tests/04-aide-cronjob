@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# set -eu
+
+ROOTDIR=$(mktemp -d)
+trap 'rm -rf ${ROOTDIR}' 0 INT QUIT ABRT PIPE TERM
+
+echo "root_prefix = ${ROOTDIR}" > /etc/aide/aide.conf.d/00-autopkgtest
+
+aideinit -f 2> /dev/null
+
+/etc/cron.daily/aide

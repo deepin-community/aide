@@ -1,0 +1,675 @@
+.TH AIDE.CONF 5 "2021-02-10" "aide v0.17.3" "AIDE"
+.SH NAME
+aide.conf - The configuration file for Advanced Intrusion Detection
+Environment
+.PP
+.SH SYNOPSIS
+\fBaide.conf\fP is the configuration file for Advanced Intrusion
+Detection Environment. \fBaide.conf\fP contains the runtime
+configuration aide uses to initialize or check the AIDE database.
+.PP
+.SH "FILE FORMAT"
+aide.conf is case-sensitive. Leading and trailing white spaces are
+ignored. AIDE uses the backslash character (\fB\\\fR) as escape character for ' '
+(space), '@' and '\\' (backslash) (e.g. '\\ ' or '\\@'). To literally match a '\fB\\\fR'
+in a file path with a regular expression you have to escape the backslash
+twice (i.e. '\fB\\\\\\\\\fR').
+.PP
+There are three types of lines in \fBaide.conf\fP. First there are the
+configuration options which are used to set configuration parameters and
+define groups. Second, there are (restricted) rules that are used to indicate
+which files are added to the database. Third, macro lines define or undefine
+variables within the config file. Lines beginning with # are ignored as
+comments.
+.PP
+
+.SH "CONFIG OPTIONS"
+.PP
+These lines have the format parameter=value. See URLS for a list of
+valid urls.
+.PP
+.TP
+database_in (type: URL, default: see \fB--version\fP output)
+.TQ
+database (DEPRECATED, will be removed in a future release)
+The url from which database is read. There can only be one of these
+lines. If there are multiple database lines then the first is used.
+.IP "database_out (type: URL, default: see \fB--version\fP output)"
+The url to which the new database is written to. There can only be one
+of these lines. If there are multiple database_out lines then the
+first is used.
+.IP "database_new (type: URL, default: \fB<none>\fP)"
+The url from which the other database for \-\-compare is read.
+.IP "database_attrs (type: attribute expression, default: \fBH\fP)"
+The attributes of the (uncompressed) database files which are to be added to
+the reports in report level >= \fBdatabase_attributes\fP . Only checksum attributes are
+supported. To disable set
+.I database_attrs
+to
+.RB ' E '.
+.IP "database_add_metadata (type: bool, default: \fBtrue\fR)"
+Whether to add the AIDE version and the time of database generation as comments
+to the database file or not. This option may be set to false by default in a
+future release.
+
+.IP "log_level (type: log level, default: \fBwarning\fR)"
+The log level to use. Log messages are written to \fIstderr\fR. If there are
+multiple \fIlog_level\fR lines then the first one is used. The \-\-log-level or
+\-L command line option overwrites this option.
+
+.RS
+The following log levels are available:
+
+.RS
+\fBerror\fP: show unrecoverable issues that have to be handled by the user. Errors are fatal to the AIDE process.
+
+\fBwarning\fP: additionally show recoverable issues that most likely lead to unexpected behaviour and should be handled by the user
+
+\fBnotice\fP: additionally show recoverable issues that sometimes lead to unexpected behaviour and might be handled by the user.
+
+\fBinfo\fP: additionally show informational messages
+
+\fBrule\fP: additionally show messages to help to debug the path rule matching
+
+\fBconfig\fP: additionally show messages to help to debug config and rule parsing
+
+\fBdebug\fP: additionally show messages that are useful to debug the application (very verbose)
+
+\fBtrace\fP: detailed information about the flow of the application (e.g. in-loop logging) (even more verbose)
+
+.RE
+
+.RE
+
+.IP "verbose (type: number, range: 0 - 255, default: \fB5\fR)"
+Removed in AIDE v0.17, use \fBlog_level\fR and \fBreport_level\fR options instead
+.IP "gzip_dbout (type: bool, default: \fBfalse\fR)"
+Whether the output to the database is gzipped or not. This option is available
+only if zlib support is compiled in.
+.IP "root_prefix (type: path, default: \fB<empty>\fR)"
+The prefix to strip from each file name in the file system before applying the
+rules and writing to database. AIDE removes a trailing slash from the prefix.
+If there are multiple root_prefix lines then the first one is used. This option
+has no effect in compare mode.
+.IP "acl_no_symlink_follow (type: bool, default: \fBfalse\fR)"
+Whether to check ACLs for symlinks or not. This option
+is available only if acl support is compiled in.
+.IP "warn_dead_symlinks (type: path, default: \fBfalse\fR)"
+Whether to warn about dead symlinks or not.
+.IP "config_version (type: string, default: \fB<empty>\fR)"
+The value of config_version is printed in the report and also printed
+to the database. This is for informational purposes only. It has no
+other functionality.
+.IP "Group definitions"
+If the parameter is not one of the previous parameters then it is
+regarded as a group definition. Value is then regarded as an
+attribute expression.
+.IP
+See DEFAULT GROUPS for an explanation of default predefined groups.
+
+Group names are limited to alphanumeric characters (\fBA-Za-z0-9\fP).
+.PP
+
+.SH REPORT OPTIONS
+.PP
+
+.IP "report_url (type: URL, default: \fBstdout\fR)"
+
+The URL that the output is written to.
+
+Multiple instances of the \fBreport_url\fR option are supported.
+
+.RS
+.B Examples:
+
+.RS 3
+.nf
+.B report_url=file:/var/log/aide.log
+.fi
+
+.RS 3
+Write report to \fI/var/log/aide.log\fR.
+.RE
+.RE
+
+.RS 3
+.nf
+.B report_url=stdout
+.fi
+
+.RS 3
+Write report to \fIstdout\fR.
+.RE
+.RE
+
+.RS 3
+.nf
+.B report_url=syslog:<LOG_FACILITY>
+.fi
+
+.RS 3
+Write report to \fIsyslog\fR using \fILOG_FACILITY\fR.
+.RE
+.RE
+
+.RE
+
+.PP
+The following report options are available (to take effect they
+have to be set before \fBreport_url\fR):
+.PP
+
+.IP "report_level (type: report level, default: \fBchanged_attributes\fR)"
+
+The report level to use. The available report levels are as follows:
+
+.RS
+\fBminimal\fP: print single line whether AIDE found differences to the database
+
+\fBsummary\fP: additionally print number of added, removed and changed files
+
+\fBdatabase_attributes\fP: additionally print database checksums
+
+\fBlist_entries\fP: additionally print lists of added, removed and changed entries
+
+\fBchanged_attributes\fP: additionally print details about changed entries
+
+\fBadded_removed_attributes\fP: additionally print details about added and removed attributes
+
+\fBadded_removed_entries\fP: additionally print details about added and removed entries
+.RE
+.IP "report_base16 (type: bool, default: \fBfalse\fR)"
+Base16 encode the checksums in the report. The default is to
+report checksums in base64 encoding.
+.IP "report_detailed_init (type: bool, default: \fBfalse\fR)"
+Report added files (report level >= \fBlist_entries\fP) and their details (report
+level >= \fBadded_removed_entries\fP) in initialization mode.
+.IP "report_quiet (type: bool, default: \fBfalse\fR)"
+Suppress report output if no differences to the database have been found.
+.IP "report_append (type: bool, default: \fBfalse\fR)"
+Append to the report URL.
+.TP
+report_grouped (type: bool, default: \fBtrue\fR)
+.TQ
+grouped (DEPRECATED, will be removed in a future release)
+Group the files in the report by added, removed and changed files.
+.TP
+report_summarize_changes (type: bool, default: \fBtrue\fR)
+.TQ
+summarize_changes (DEPRECATED, will be removed in a future release)
+Summarize changes in the added, removed and changed files
+sections of the report.
+
+The general format is like the string YlZbpugamcinHAXSEC, where Y is
+replaced by the file-type (\fBf\fP for a regular file, \fBd\fP for a
+directory, \fBl\fP for a symbolic link, \fBc\fP for a character device,
+\fBb\fP for a block device, \fBp\fP for a FIFO, \fBs\fP for a unix
+socket, \fBD\fP for a Solaris door, \fBP\fP for a Solaris event port, \fB!\fP
+if file type has changed and \fB?\fP otherwise).
+
+The Z is replaced as follows: A \fB=\fP means that the size has not changed,
+a \fB<\fP reports a shrinked size and a \fB>\fP reports a grown size.
+
+The other letters in the string are the actual letters that will be output
+if the associated attribute for the item has been changed or a "." for no
+change, a "+" if the attribute has been added, a "-" if it has been removed,
+a ":" if the attribute is ignored (but not forced) or a " " if the attribute has
+not been checked. The exceptions to this are: (1) a newly created file replaces
+each letter with a "+", and (2) a removed file replaces each letter with a "-".
+
+The attribute that is associated with each letter is as follows:
+
+.RS
+.IP o
+A \fBl\fP means that the link name has changed.
+.IP o
+A \fBb\fP means that the block count has changed.
+.IP o
+A \fBp\fP means that the permissions have changed.
+.IP o
+An \fBu\fP means that the uid has changed.
+.IP o
+A \fBg\fP means that the gid has changed.
+.IP o
+An \fBa\fP means that the access time has changed.
+.IP o
+A \fBm\fP means that the modification time has changed.
+.IP o
+A \fBc\fP means that the change time has changed.
+.IP o
+An \fBi\fP means that the inode has changed.
+.IP o
+A \fBn\fP means that the link count has changed.
+.IP o
+A \fBH\fP means that one or more message digests have changed.
+.RE
+
+.RS
+The following letters are only available when explicitly enabled using configure:
+.RE
+
+.RS
+.IP o
+A \fBA\fP means that the access control list has changed.
+.IP o
+A \fBX\fP means that the extended attributes have changed.
+.IP o
+A \fBS\fP means that the SELinux attributes have changed.
+.IP o
+A \fBE\fP means that the file attributes on a second extended file system have changed.
+.IP o
+A \fBC\fP means that the file capabilities have changed.
+.RE
+.IP "report_ignore_added_attrs (type: attribute expression, default: \fBempty\fR)"
+Attributes whose addition is to be ignored in the report.
+.IP "report_ignore_removed_attrs (type: attribute expression, default: \fBempty\fR)"
+Attributes whose removal is to be ignored in the report.
+.TP
+report_ignore_changed_attrs (type: attribute expression, default: \fBempty\fR)
+.TQ
+ignore_list (removed in AIDE v0.17)
+Attributes whose change is to be ignored in the report.
+.TP
+report_force_attrs (type: attribute expression, default: \fBempty\fR)
+.TQ
+report_attributes (removed in AIDE v0.17)
+Attributes which are always printed in the report for changed files. If an attribute is both ignored and forced the
+attribute is not considered for file change but printed in the final report as long as the file has been otherwise changed.
+.IP "report_ignore_e2fsattrs (type: string, default: \fB0\fR)"
+List (no delimiter) of ext2 file attributes which are to be ignored in the report.
+See
+.BR chattr (1)
+for the available attributes. Use \fB0\fR (zero) to not ignore any
+attribute. Ignored attributes are represented by a ':' in the output.
+
+.RS
+.B Example:
+
+.RS 3
+Ignore changes of the ext2 file attributes compression error (E), huge file
+(h), indexed directory (I):
+
+.RS 3
+.nf
+report_ignore_e2fsattrs=EhI
+.fi
+.RE
+.RE
+.RE
+.PP
+.SH "RULES"
+.PP
+AIDE supports three types of rules:
+
+Regular rule:
+.RS 3
+
+.nf
+.B <regex> <attribute expression>
+.fi
+
+Files and directories matching the regular expression are added to the
+database.
+
+.RE
+
+Negative rule:
+.RS 3
+
+.nf
+.B !<regex>
+.fi
+
+Files and directories matching the regular expression are ignored and not added
+to the database. The children of matching directories are also ignored.
+
+.RE
+
+Equals rule:
+.RS 3
+
+.nf
+.B =<regex> <attribute expression>
+.fi
+
+Files and directories matching the regular expression are added to the
+database. The children of directories are only added if the regular expression
+ends with a "/". The children of sub-directories are not added at all.
+
+.RE
+
+Every regular expression has to start with a "/". An implicit ^ is added in
+front of each regular expression. In other words the regular expressions are
+matched at the first position against the complete filename (i.e. including the
+path). Special characters in your filenames can be escaped using two-digit URL
+encoding (for example, %20 to represent a space).
+
+See EXAMPLES and doc/aide.conf for examples.
+.PP
+More in-depth discussion of the selection algorithm can be found in
+the AIDE manual.
+.IP
+.PP
+.SH "RESTRICTED RULES"
+.PP
+Restricted rules are like normal rules but can be
+restricted to file types. The following file types are supported:
+
+.RS
+
+\fBf\fP: restrict rule to regular files
+
+\fBd\fP: restrict rule to directories
+
+\fBl\fP: restrict rule to symbolic links
+
+\fBc\fP: restrict rule to character devices
+
+\fBb\fP: restrict rule to block devices
+
+\fBp\fP: restrict rule to FIFO files
+
+\fBs\fP: restrict rule to UNIX sockets
+
+\fBD\fP: restrict rule to Solaris doors
+
+\fBP\fP: restrict rule to Solaris event ports
+.RE
+
+The file types are separated by comma. The syntax of restricted
+rules is as follows:
+
+Restricted regular rule:
+.RS 3
+.nf
+.B <regex> <file types> <attribute expression>
+.fi
+.RE
+
+Restricted negative rule:
+.RS 3
+.nf
+.B !<regex> <file types>
+.fi
+.RE
+
+Restricted equals rule:
+.RS 3
+.nf
+.B =<regex> <file types> <attribute expression>
+.fi
+.RE
+
+.B Examples
+.RS 3
+Only add directories and files to the database:
+
+.RS 3
+.nf
+.B / d,f R
+.fi
+.RE
+.RE
+
+.RS 3
+Add all but directory entries to the database:
+
+.RS 3
+.nf
+.B !/run d
+.B /run R
+.fi
+.RE
+.RE
+
+.RS 3
+Use specific rule for directories:
+
+.RS 3
+.nf
+.B /run d R-m-c-i
+.B /run R
+.fi
+.RE
+.RE
+
+.PP
+.SH "MACRO LINES"
+.PP
+.IP "@@define \fBVAR\fR \fBval\fR"
+Define variable \fBVAR\fR to value \fBval\fR.
+.IP "@@undef \fBVAR\fR"
+Undefine variable \fBVAR\fR.
+.IP "@@ifdef \fBVAR\fR, @@ifndef \fBVAR\fR"
+@@ifdef begins an if statement. It must be terminated with an @@endif
+statement. The lines between @@ifdef and @@endif are used if variable
+\fBVAR\fR is defined. If there is an @@else statement then the part
+between @@ifdef and @@else is used is \fBVAR\fR is defined otherwise
+the part between @@else and @@endif is used. @@ifndef reverses the
+logic of @@ifdef statement but otherwise works similarly.
+.IP "@@ifhost \fBhostname\fR, @@ifnhost \fBhostname\fR"
+@@ifhost works like @@ifdef only difference is that it checks whether
+\fBhostname\fR equals the name of the host that AIDE is running on.
+\fBhostname\fR is the name of the host without the domainname
+(hostname, not hostname.example.com).
+.IP "@@{\fBVAR\fR}"
+@@{\fBVAR\fR} is replaced with the value of the variable \fBVAR\fR.
+If variable \fBVAR\fR is not defined an empty string is used.
+
+Variables are supported in strings and in regular expressions of selection
+lines.
+
+.RS
+Pre-defined marco variables:
+
+.RS 3
+\fB@@{HOSTNAME}\fP: hostname of the current system
+.RE
+
+.RE
+
+.IP "@@else"
+Begins the else part of an if statement.
+.IP "@@endif"
+Ends an if statement.
+
+.IP "@@include \fBFILE\fR"
+Include \fBFILE\fR.
+
+The content of the file is used as if it were inserted in this part of the
+config file.
+
+The maximum depth of nested includes is 16.
+
+.IP "@@include \fBDIRECTORY\fR \fBREGEX\fR"
+Include all (regular) files found in \fBDIRECTORY\fR matching regular
+expression \fBREGEX\fR (sub-directories are ignored). The file are included in
+lexical sort order.
+
+The content of the files is used as if it were inserted in this
+part of the config file.
+
+.TP
+@@x_include \fBFILE\fR
+.TQ
+@@x_include \fBDIRECTORY\fR \fBREGEX\fR
+\fB@x_include\fR is identical to \fB@@include\fR, except that if a config file
+is executable is is run and the output is used as config.
+
+If the executable file exits with status greater than zero or writes to stderr
+aide stops with an error.
+
+For security reasons \fBDIRECTORY\fR and each executable config file must be
+owned by the current user and must not be group- or world-writable.
+
+.IP "@@x_include_setenv \fBVAR\fR \fBVALUE\fR"
+
+Adds the variable \fBVAR\fR with the value \fBVALUE\fR to the environment used
+for config file execution.
+
+Environment variable names are limited to alphanumeric characters
+(\fBA-Za-z0-9\fP) and the underscore '\fB_\fR' and must not begin with a digit.
+
+.PP
+
+.SH TYPES
+
+.B bool
+.RS 3
+Valid values are \fByes\fR, \fBtrue\fR, \fBno\fR or \fBfalse\fR.
+.RE
+
+.B "attribute expression"
+.RS 3
+
+An attribute expression is of the following form:
+.IP
+.nf
+  <group>
+| <expr> + <group>
+| <expr> - <group>
+.fi
+.RE
+
+.B URLS
+.RS 3
+Urls can be one of the following. Input urls cannot be used as outputs
+and vice versa.
+.RS
+
+.IP "stdout"
+.IP "stderr"
+Output is sent to stdout, stderr respectively.
+.IP "stdin"
+Input is read from stdin.
+.IP "file:/\fBpath\fR"
+Input is read from \fBpath\fR or output is written to \fBpath\fR.
+.IP "fd:\fBnumber\fR"
+Input is read from filedescriptor \fBnumber\fR or output is written to
+\fBnumber\fR.
+.IP "syslog:\fBLOG_FACILITY\fR"
+Output is written to syslog using \fILOG_FACILITY\fR.
+
+.RE
+
+.RE
+
+.SH "DEFAULT GROUPS"
+.PP
+.B File attribute groups
+.RS 3
+.IP "\fBftype\fR: file type"
+.IP "\fBp\fR: permissions"
+.IP "\fBi\fR: inode"
+.IP "\fBl\fR: link name"
+.IP "\fBn\fR: number of links"
+.IP "\fBu\fR: user"
+.IP "\fBg\fR: group"
+.IP "\fBs\fR: size"
+.IP "\fBb\fR: block count"
+.IP "\fBm\fR: mtime"
+.IP "\fBa\fR: atime"
+.IP "\fBc\fR: ctime"
+.IP "\fBacl\fR: access control list (requires \fIlibacl\fR)"
+.IP "\fBselinux\fR: selinux attributes (requires \fIlibselinux\fR)"
+.IP "\fBxattrs\fR: extended attributes (requires \fIlibattr\fR)"
+.IP "\fBe2fsattrs\fR: file attributes on a second extended file system (requires \fIlibext2fs\fR)"
+.IP "\fBcaps\fR: file capabilities (requires \fIlibcap2\fR)"
+.RE
+
+Use 'aide --version' to show which compiled in groups are available.
+
+.B Special groups
+.RS 3
+.IP "S:	check for growing size"
+.IP "I:	ignore changed filename"
+\fBNote\fR: when c is also set in the same rule a ctime change is ignored when the name of a file is changed
+
+.IP "ANF:	allow new files
+When 'ANF' is used, new files are added to the new database, but are
+ignored in the report.
+
+
+.IP "ARF:	allow removed files
+When 'ARF' is used, files missing on disk are omitted from the new database,
+but are ignored in the report.
+
+.LP
+.LP
+
+.RE
+
+.B Hashsums groups
+.RS 3
+.IP "md5: MD5 checksum"
+.IP "sha1: SHA-1 checksum"
+.IP "sha256: SHA-256 checksum"
+.IP "sha512: SHA-512 checksum"
+.IP "rmd160: RIPEMD-160 checksum"
+.IP "tiger: tiger checksum"
+.IP "haval: haval256 checksum (\fIlibmhash\fR only)"
+.IP "crc32:	crc32 checksum"
+.IP "crc32b:	crc32 checksum (\fIlibmhash\fR only)"
+.IP "gost: GOST R 34.11-94 checksum"
+.IP "whirlpool: whirlpool checksum"
+.IP "stribog256: GOST R 34.11-2012, 256 bit checksum (\fIlibgcrypt\fR only)"
+.IP "stribog512: GOST R 34.11-2012, 512 bit checksum (\fIlibgcrypt\fR only)"
+.RE
+
+Use 'aide --version' to show which compiled hashsums are available.
+
+.B Compound groups
+.RS 3
+.IP "R:	p+ftype+i+l+n+u+g+s+m+c+md5+X"
+.IP "L:	p+ftype+i+l+n+u+g+X"
+.IP ">:	Growing file p+ftype+l+u+g+i+n+S+X"
+.IP "H:	all compiled in hashsums"
+.IP "X:	acl+selinux+xattrs+e2fsattrs+caps (if groups are compiled in)"
+.IP "E:	Empty group"
+.RE
+.LP
+
+Please run 'aide --version' to list the default compound groups.
+
+.PP
+.SH EXAMPLES
+.IP
+.B "/ R"
+.LP
+This adds all files on your machine to the database. This one line
+is a fully qualified configuration file.
+.IP
+.B "!/dev$"
+.LP
+This ignores the /dev directory structure.
+.IP
+.B "=/foo R"
+.LP
+Only /foo and /foobar are taken into the database. None of their children are
+added.
+.IP
+.B "=/foo/ R"
+.LP
+Only /foo and its children (e.g. /foo/file and /foo/directory) are taken into
+the database. The children of sub-directories (e.g. /foo/directory/bar) are not
+added.
+.IP
+.B "\fBAll\fR=ftype+p+l+u+g+s+m+c+a+i+b+n+H+X"
+.LP
+This line defines group \fBAll\fR. It has all attributes, all compiled in
+hashsums (\fBH\fR) and all compiled in extra file attributes (\fBX\fR).
+See '--version' output for the compiled in hashsums and extra groups.
+.PP
+.SH HINTS
+In the following, the first is not allowed in AIDE. Use the latter instead.
+.IP
+.B "/foo epug"
+.IP
+.B "/foo e+p+u+g"
+.PP
+.SH "SEE ALSO"
+.BR aide (1)
+.SH DISCLAIMER
+All trademarks are the property of their respective owners.
+No animals were harmed while making this webpage or this piece of
+software.

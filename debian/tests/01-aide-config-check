@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+
+aide --config /etc/aide/aide.conf -L notice --config-check

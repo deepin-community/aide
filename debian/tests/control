@@ -1,0 +1,7 @@
+Tests: 01-aide-config-check, 02-aide-path-check, 03-aide-init, 04-aide-cronjob
+Depends: aide, aide-common
+Restrictions: needs-root
+
+Tests: 01-aide-config-check, 02-aide-path-check, 03-aide-init
+Depends: aide-dynamic, aide-common
+Restrictions: needs-root

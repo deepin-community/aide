@@ -1,0 +1,62 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+DPKG_EXPORT_BUILDFLAGS = 1
+
+include /usr/share/dpkg/default.mk
+
+define COMMON_CONFIGURE_ARGS
+	--prefix=/usr
+	--sysconfdir=/var/lib/aide/please-dont-call-aide-without-parameters
+	--without-config-file --disable-default-db --with-zlib
+	--with-xattr
+	--with-posix-acl
+	--with-e2fsattrs
+endef
+EXTRA_CONFIGURE_ARGS= $(shell dpkg-buildflags --export=cmdline)
+
+BUILT_USING_PACKAGES= zlib1g-dev libpcre3-dev libmhash-dev libattr1-dev libacl1-dev libext2fs-dev libc-dev-bin
+
+ifeq ($(DEB_HOST_ARCH_OS),linux)
+EXTRA_CONFIGURE_ARGS+= --with-selinux --with-audit --with-capabilities
+BUILT_USING_PACKAGES+= libselinux1-dev libaudit-dev libcap-dev
+endif
+
+BUILT_USING=$(shell dpkg-query -f '$${source:Package} (= $${source:Version}), ' -W $(BUILT_USING_PACKAGES))
+
+%:
+		dh $@
+
+override_dh_auto_configure-arch:
+	mkdir -p aide && cd aide && ../configure $(strip $(COMMON_CONFIGURE_ARGS)) $(strip $(EXTRA_CONFIGURE_ARGS))
+	mkdir -p aide-dynamic && cd aide-dynamic && ../configure $(strip $(COMMON_CONFIGURE_ARGS)) $(strip $(EXTRA_CONFIGURE_ARGS)) --disable-static
+
+override_dh_auto_build-arch:
+	dh_auto_build --builddirectory aide
+	dh_auto_build --builddirectory aide-xen
+	dh_auto_build --builddirectory aide-dynamic
+
+override_dh_auto_install-arch:
+	dh_auto_install --builddirectory aide --destdir debian/aide
+	dh_auto_install --builddirectory aide-xen --destdir debian/aide-xen
+	dh_auto_install --builddirectory aide-dynamic --destdir debian/aide-dynamic
+
+override_dh_auto_clean-arch:
+	dh_auto_clean --builddirectory aide
+	dh_auto_clean --builddirectory aide-xen
+	dh_auto_clean --builddirectory aide-dynamic
+
+override_dh_autoreconf-indep override_dh_auto_configure-indep override_dh_auto_build-indep:
+
+override_dh_gencontrol:
+	dh_gencontrol -- -VBuilt-Using="$(BUILT_USING)"
+
+override_dh_auto_clean-indep:
+
+override_dh_clean:
+	dh_clean
+	debconf-updatepo
